@@ -1,52 +1,42 @@
 import random
 
-# -----------------------------
-# WORD DATABASE (you can expand this)
-# -----------------------------
-WORDS = [
-    "apple", "grape", "crate", "slate", "trace",
-    "stone", "plane", "flame", "brake", "crane",
-    "glare", "share", "spare", "score", "shore"
-]
+#word database
+WORDS = []
 
-# -----------------------------
-# DFA VALIDATOR FOR FEEDBACK
-# -----------------------------
+
+# validates the language
 def validate_feedback(feedback):
     """
     DFA that accepts strings of length 5
     over alphabet { '/', '-', 'x' }
     """
 
-    # State simulation: q0 → q1 → q2 → q3 → q4 → q5
     state = 0
 
     for ch in feedback:
         if ch not in ['/', '-', 'x']:
-            return False  # invalid symbol → dead state
+            return False  #invalid symbol
 
         state += 1
 
         if state > 5:
-            return False  # too long
+            return False  #too long
 
-    return state == 5  # must end exactly at q5
+    return state == 5  #must end exactly at q5
 
 
-# -----------------------------
-# FILTER WORDS BASED ON FEEDBACK
-# -----------------------------
+#eliminates words
 def filter_words(word_list, guess, feedback):
     new_words = []
 
     for word in word_list:
         valid = True
 
-        # Track used letters (for correct matching)
+        #Track used letters (for correct matching)
         word_chars = list(word)
         used = [False] * 5
 
-        # STEP 1: Handle "/" (correct position)
+        #STEP 1: Handle "/" (correct position)
         for i in range(5):
             if feedback[i] == '/':
                 if word[i] != guess[i]:
@@ -54,10 +44,10 @@ def filter_words(word_list, guess, feedback):
                     break
                 used[i] = True
 
-        if not valid:
+        if not valid: #remove words if it doesnt have a correct letter, correct position
             continue
 
-        # STEP 2: Handle "-" (misplaced letters)
+        #STEP 2: Handle "-" (misplaced letters)
         for i in range(5):
             if feedback[i] == '-':
                 found = False
@@ -68,7 +58,7 @@ def filter_words(word_list, guess, feedback):
                         used[j] = True
                         break
 
-                if not found:
+                if not found: #if a misplaced letter is not found in the word, remove it
                     valid = False
                     break
 
@@ -78,7 +68,7 @@ def filter_words(word_list, guess, feedback):
         # STEP 3: Handle "x" (not in word)
         for i in range(5):
             if feedback[i] == 'x':
-                # check if guess[i] appears anywhere UNUSED
+                #if a word already deemed not there contains a letter not in your word, remove it
                 if guess[i] in [word[j] for j in range(5) if not used[j]]:
                     valid = False
                     break
@@ -89,16 +79,24 @@ def filter_words(word_list, guess, feedback):
     return new_words
 
 
-# -----------------------------
-# MAIN GAME FUNCTION
-# -----------------------------
+#Main game
 def play_game():
-    print("\nThink of any 5-letter word from my database.")
-    ready = input('Type "yes" when ready: ').strip().lower()
+    print("\nThink of a 5-letter word.")
+    print("I will try to guess it in 6 attempts.")
+    print("After each guess, provide feedback in a string of exactly 5 characters")
+    print("our Language consist of {w | w ∈ { '/', '-', 'x' }*5}")
+    print("Analyze my guess, wherein '/' means correct letter and position, '-' means correct letter but wrong position, and 'x' means the letter is not in the word.")
+    print('Type "yes" when ready.')
+
+    ready = input("> ").strip().lower()
 
     if ready != "yes":
-        print("Okay, restarting...")
+        print("Restarting...")
         return
+
+    print("\nFeedback format:")
+    print('"/" = correct, "-" = wrong position, "x" = not in word')
+    print("Example: /-x--")
 
     possible_words = WORDS.copy()
     attempts = 6
@@ -108,30 +106,39 @@ def play_game():
             print("\nYour chosen word does not exist in my database.")
             return
 
-        guess = random.choice(possible_words)
+        guess = random.choice(possible_words) #choose random valid word based on what it knows
         print(f"\nSystem guess: {guess}")
 
-        feedback = input("Enter feedback (/ for correct, - for misplaced, x for not in word): ").strip()
+        #loop until valid input WITHOUT changing guess
+        while True:
+            feedback = input("Enter feedback: ").strip()
 
-        if not validate_feedback(feedback):
-            print("❌ Invalid input. Must be exactly 5 characters using only '/', '-', 'x'.")
-            continue
+            if not validate_feedback(feedback):
+                print("Invalid input. Use exactly 5 symbols: / - x")
+                continue
+
+            break  # valid input → exit loop
 
         if feedback == "/////":
-            print("🎉 Guessed correctly!")
+            print("Guessed Correctly, so your word is: " + guess)
             return
 
         possible_words = filter_words(possible_words, guess, feedback)
         attempts -= 1
         print(f"Attempts left: {attempts}")
 
-    print("\n❌ Failed to guess within 6 attempts.")
+    print("\nFailed to guess within 6 attempts.")
 
 
-# -----------------------------
-# REPLAY LOOP
-# -----------------------------
 def main():
+    
+    #get a list of valid words from file
+    with open("valid-wordle-words.txt", "r") as f:
+        for line in f:
+            word = line.strip().lower()
+            if len(word) == 5 and word.isalpha():
+                WORDS.append(word)
+    
     while True:
         play_game()
         again = input("\nPlay again? (yes/no): ").strip().lower()
@@ -140,8 +147,6 @@ def main():
             break
 
 
-# -----------------------------
-# RUN PROGRAM
-# -----------------------------
+
 if __name__ == "__main__":
     main()
