@@ -81,10 +81,10 @@ def filter_words(word_list, guess, feedback):
 
 #Main game
 def play_game():
-    print("\nThink of a 5-letter word.")
+    print("\nThink of a 5-letter word.\n")
     print("I will try to guess it in 6 attempts.")
-    print("After each guess, provide feedback in a string of exactly 5 characters")
-    print("our Language consist of {w | w ∈ { '/', '-', 'x' }*5}")
+    print("After each guess, provide feedback in a string of exactly 5 characters\n")
+    print("our Language consist of {w | w ∈ { '/', '-', 'x' }*5}\n")
     print("Analyze my guess, wherein '/' means correct letter and position, '-' means correct letter but wrong position, and 'x' means the letter is not in the word.")
     print('Type "yes" when ready.')
 
@@ -128,6 +128,11 @@ def play_game():
         print(f"Attempts left: {attempts}")
 
     print("\nFailed to guess within 6 attempts.")
+    #print out possible remaining words
+    if possible_words:
+        print("Possible remaining words were: " + ", ".join(possible_words))
+    else:
+        print("No possible words remain based on feedback.")
 
 
 def main():
