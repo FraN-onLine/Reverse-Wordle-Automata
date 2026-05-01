@@ -1,56 +1,42 @@
 import re
+import time #short pauses for visualization
 
-
+#puts the automata into a class, this helps with our stack
+#pushdown also because of bracket matching
 class LogicalPDA:
+
     def __init__(self):
-        # stack used for matching parentheses
-        self.stack = []
+        #stack starts with bottom marker $
+        self.stack = ['$']
 
     def tokenize(self, expr):
-        """
-        Break expression into valid logical tokens.
+        #turns input into valid tokens
+        pattern = r'\s*(<->|->|~|\^|v|\(|\)|p|q)\s*'
 
-        Allowed:
-        p, q
-        ~
-        ^
-        v
-        ->
-        <->
-        (
-        )
+        tokens = []
+        pos = 0
 
-        Spaces are ignored.
-        """
-        # remove all spaces first
-        expr = expr.replace(" ", "")
+        while pos < len(expr):
+            match = re.match(pattern, expr[pos:]) #looks a match for each token
 
-        # match valid tokens only
-        pattern = r'(<->|->|~|\^|v|\(|\)|p|q)'
+            #invalid tokens returns 
+            if not match:
+                return None
 
-        tokens = re.findall(pattern, expr)
+            token = match.group(1)
+            tokens.append(token)
 
-        # make sure the entire expression was tokenized
-        # if not, there is an invalid symbol
-        if ''.join(tokens) != expr:
-            return None
+            #move to next part
+            pos += match.end()
 
         return tokens
 
     def show_stack(self):
-        """
-        Display current stack state
-        """
-        if not self.stack:
-            print("Stack: empty")
-        else:
-            print("Stack (top → bottom):", list(reversed(self.stack)))
+        #display stack
+        print("Stack: [", ', '.join(self.stack), "]")
 
     def validate(self, expr):
-        """
-        Main PDA validator
-        """
-
+        #get expression and turn into takens
         tokens = self.tokenize(expr)
 
         if tokens is None:
@@ -63,40 +49,39 @@ class LogicalPDA:
 
         print("\nTokens:", tokens)
 
-        # tracks what should come next
-        # True = expecting variable, ~, or (
-        # False = expecting operator or )
+        # True = waiting for value
+        # False = waiting for operator
         expecting_value = True
 
         print("\nProcessing...\n")
 
-        for i, token in enumerate(tokens):
+        for token in tokens:
 
             print(f"Read: {token}")
 
-            # if expecting a value
+            # expecting variable / negation / (
             if expecting_value:
 
-                # variables are valid values
+                # variable
                 if token in ['p', 'q']:
                     print("Valid variable")
                     expecting_value = False
 
-                # negation is allowed before a value
+                # negation
                 elif token == '~':
                     print("Negation")
-                    # still waiting for actual value
+                    # still waiting for value
 
-                # opening parenthesis
+                # opening bracket
                 elif token == '(':
-                    print("Push '('")
+                    print("Push '(' onto stack")
                     self.stack.append('(')
 
                 else:
                     print("Syntax error: expected variable")
                     return False
 
-            # if expecting operator or closing parenthesis
+            # expecting operator / )
             else:
 
                 # binary operators
@@ -104,13 +89,15 @@ class LogicalPDA:
                     print("Valid operator")
                     expecting_value = True
 
-                # closing parenthesis
+                # closing bracket
                 elif token == ')':
-                    if not self.stack:
-                        print("Syntax error: extra ')'")
+
+                    # if only $ remains, no matching (
+                    if self.stack[-1] == '$':
+                        print("Syntax error: unmatched ')'")
                         return False
 
-                    print("Pop '('")
+                    print("Pop '(' from stack")
                     self.stack.pop()
 
                 else:
@@ -120,32 +107,47 @@ class LogicalPDA:
             self.show_stack()
             print()
 
-        # final checks
+            # pause for visualization
+            time.sleep(0.7)
+
+        print("\nFinal checking...")
+
+        # cannot end expecting a value
         if expecting_value:
             print("Expression ended too early.")
             return False
 
-        if self.stack:
+        # stack should only have $
+        if len(self.stack) > 1:
             print("Unclosed parenthesis found.")
             self.show_stack()
             return False
 
-        print("Expression accepted.")
+        # pop $
+        print("Pop '$' (bottom marker)")
+        self.stack.pop()
+
+        self.show_stack()
+
+        print("\nExpression accepted.")
         return True
 
 
 def main():
+
     while True:
-        print("\n=== Logical Expression Validator ===")
-        print("Allowed:")
+        print("\n=== Logical Expression Validator (PDA) ===")
+        print("-"*40)
+        print("\nAllowed:")
         print("Variables: p, q")
         print("Operators: ~ ^ v -> <->")
         print("Parentheses: ( )")
+
         print("\nExamples:")
         print("p ^ q")
         print("(p v q) -> p")
         print("~(p <-> q)")
-
+        print("-"*40)
         expr = input("\nEnter expression: ")
 
         validator = LogicalPDA()
