@@ -1,6 +1,15 @@
 import re
 import time #short pauses for visualization
 
+#q0 -> pushes bottom marker $ onto stack, pops nothing, then goes to q1
+#q1 -> reads input, expects variable(goes to q3), negation(goes to q2) or open brakcet(pushes ( onto stack, goes to q4), or goes to q7 on end popping $ from stack
+#q2 -> reads input, expects variable or open bracket or negation (stays in q2)
+#q3 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6)
+#q4 -> reads input, expects variable(goes to q3) pr open brakcet (pushes ( onto stack, goes to q4)
+#q5 -> state where the operator has been read, goes back to q1 again
+#q6 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6)
+#q7 -> final state, accepts if stack is empty (only $ remains)
+
 #puts the automata into a class, this helps with our stack
 #pushdown also because of bracket matching
 class LogicalPDA:
@@ -8,6 +17,7 @@ class LogicalPDA:
     def __init__(self):
         #stack starts with bottom marker $
         self.stack = ['$']
+        self.state = 'q0'
 
     def tokenize(self, expr):
         #turns input into valid tokens
@@ -35,10 +45,21 @@ class LogicalPDA:
         #display stack
         print("Stack: [", ', '.join(self.stack), "]")
 
+    def show_state(self):
+        #display current state
+        print("Current State:", self.state)
+
+    def change_state(self, new_state):
+        #visualize state transition
+        print(f"Transition: {self.state} -> {new_state}")
+        self.state = new_state
+
+
     def validate(self, expr):
         #get expression and turn into takens
         tokens = self.tokenize(expr)
 
+        #invalid strings
         if tokens is None:
             print("\nInvalid symbols found.")
             return False
@@ -49,59 +70,95 @@ class LogicalPDA:
 
         print("\nTokens:", tokens)
 
-        # True = waiting for value
-        # False = waiting for operator
-        expecting_value = True
+        #q0 -> q1
+        print("\nInitial State:")
+        self.show_state()
+        print("Bottom marker '$' already on stack")
+        self.change_state('q1')
 
-        print("\nProcessing...\n")
+        #True = waiting for value
+        #False = waiting for operator
+        expecting_value = True
 
         for token in tokens:
 
-            print(f"Read: {token}")
+            print(f"\nRead: {token}")
+            self.show_state()
 
             # expecting variable / negation / (
             if expecting_value:
 
-                # variable
+                #variable
                 if token in ['p', 'q']:
-                    print("Valid variable")
+
+                    #q1/q2/q4 -> q3
+                    if self.state in ['q1', 'q2', 'q4']:
+                        self.change_state('q3')
+
+                    print("Valid input, proceed read")
                     expecting_value = False
 
-                # negation
+                #negation
                 elif token == '~':
-                    print("Negation")
+
+                    #q1 -> q2 or q2 stays q2
+                    if self.state == 'q1':
+                        self.change_state('q2')
+                    elif self.state == 'q2':
+                        self.change_state('q2')
+
+                    print("Valid input, proceed read")
                     # still waiting for value
 
-                # opening bracket
+                #opening bracket
                 elif token == '(':
+
+                    #q1/q2/q4 -> q4
+                    if self.state in ['q1', 'q2', 'q4']:
+                        self.change_state('q4')
+
                     print("Push '(' onto stack")
                     self.stack.append('(')
 
                 else:
-                    print("Syntax error: expected variable")
+                    # invalid token,
+                    print("Syntax error: expected variable, negation or bracket but got", token)
                     return False
 
-            # expecting operator / )
+            #expecting operator or close bracket
             else:
 
-                # binary operators
+                #binary operators
                 if token in ['^', 'v', '->', '<->']:
-                    print("Valid operator")
+
+                    #q3/q6 -> q5 -> q1
+                    if self.state in ['q3', 'q6']:
+                        self.change_state('q5')
+
+                    print("Valid input, proceed read")
                     expecting_value = True
 
-                # closing bracket
+                    #q5 automatically returns to q1
+                    time.sleep(0.5)
+                    self.change_state('q1')
+
+                # losing bracket
                 elif token == ')':
 
-                    # if only $ remains, no matching (
+                    #if only $ remains, this means no matching ( was pushed earlier
                     if self.stack[-1] == '$':
                         print("Syntax error: unmatched ')'")
                         return False
+
+                    #q3/q6 -> q6
+                    if self.state in ['q3', 'q6']:
+                        self.change_state('q6')
 
                     print("Pop '(' from stack")
                     self.stack.pop()
 
                 else:
-                    print("Syntax error: expected operator")
+                    print("Syntax error: expected operator or closing bracket but got", token)
                     return False
 
             self.show_stack()
@@ -110,24 +167,27 @@ class LogicalPDA:
             # pause for visualization
             time.sleep(0.7)
 
-        print("\nFinal checking...")
-
         # cannot end expecting a value
         if expecting_value:
-            print("Expression ended too early.")
+            print("Verdict: Expression ended too early.")
             return False
+
+        # q1 can end to q7
+        if self.state in ['q3', 'q6'] and len(self.stack) == 1:
+            self.change_state('q7')
 
         # stack should only have $
         if len(self.stack) > 1:
-            print("Unclosed parenthesis found.")
+            print("Verdict: Unclosed parenthesis found.")
             self.show_stack()
             return False
 
-        # pop $
-        print("Pop '$' (bottom marker)")
+        # on empty (no more tokens), pop $
+        print("Pop '$' from stack")
         self.stack.pop()
 
         self.show_stack()
+        self.show_state()
 
         print("\nExpression accepted.")
         return True
@@ -152,16 +212,16 @@ def main():
 
         validator = LogicalPDA()
         valid = validator.validate(expr)
-
+        time.sleep(1) #pause before showing result
         if valid:
-            print("\nVALID")
+            print("\nThe expression " + expr + " is a logical expression.")
         else:
-            print("\nINVALID")
+            print("\nThe expression " + expr + " is not a logical expression.")
 
-        again = input("\nTry again? (yes/no): ").lower()
+        again = input("\nValidate another expression? (enter Y): ").lower()
 
-        if again != "yes":
-            print("Goodbye.")
+        if again != "y":
+            print("PDA terminated")
             break
 
 
