@@ -2,12 +2,12 @@ import re
 import time #short pauses for visualization
 
 #q0 -> pushes bottom marker $ onto stack, pops nothing, then goes to q1
-#q1 -> reads input, expects variable(goes to q3), negation(goes to q2) or open brakcet(pushes ( onto stack, goes to q4), or goes to q7 on end popping $ from stack
+#q1 -> reads input, expects variable(goes to q3), negation(goes to q2) or open brakcet(pushes ( onto stack, goes to q4)
 #q2 -> reads input, expects variable or open bracket or negation (stays in q2)
-#q3 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6)
+#q3 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6), or can go to q7, popping $ from stack
 #q4 -> reads input, expects variable(goes to q3) pr open brakcet (pushes ( onto stack, goes to q4)
 #q5 -> state where the operator has been read, goes back to q1 again
-#q6 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6)
+#q6 -> reads input, expects operator(goes to q5) or closing bracket(pops ( from stackgoes to q6) or can go to q7, popping $ from stack
 #q7 -> final state, accepts if stack is empty (only $ remains)
 
 #puts the automata into a class, this helps with our stack
@@ -165,7 +165,7 @@ class LogicalPDA:
             print()
 
             # pause for visualization
-            time.sleep(0.7)
+            time.sleep(0.8)
 
         # cannot end expecting a value
         if expecting_value:
@@ -174,6 +174,7 @@ class LogicalPDA:
 
         # q1 can end to q7
         if self.state in ['q3', 'q6'] and len(self.stack) == 1:
+            print("Current state:", self.state)
             self.change_state('q7')
 
         # stack should only have $
